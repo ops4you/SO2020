@@ -28,7 +28,7 @@ typedef struct TaskVec {
  * The TaskVec must later be passed to <tt>tvec_drop()</tt>.
  * <tt>O(1)</tt> complexity.
  * @param init (output parameter) the address of the TaskVec to initialize.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @return a pointer to the initialized TaskVec with address @p init.
  */
 TaskVec* tvec_new(TaskVec* init);
@@ -40,7 +40,7 @@ TaskVec* tvec_new(TaskVec* init);
  * The TaskVec must later be passed to <tt>tvec_drop()</tt>.
  * <tt>O(malloc(capacity * sizeof(Task)))</tt> complexity.
  * @param init (output parameter) the address of the TaskVec to initialize.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @param capacity the desired initial capacity of the TaskVec.
  * @return a pointer to the initialized TaskVec with address @p init and
  * capacity @p capacity.
@@ -50,9 +50,9 @@ TaskVec* tvec_with_cap(TaskVec* init, size_t capacity);
 /**
  * Deallocates the storage associated with a TaskVec.
  * Reading from pointers to Tasks previously owned by the TaskVec is undefined.
- * <tt>O(free())</tt> complexity.
+ * <tt>O(free(self->buf))</tt> complexity.
  * @param self the address of the TaskVec whose store shall be deallocated.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  */
 void tvec_drop(TaskVec* self);
 
@@ -60,7 +60,7 @@ void tvec_drop(TaskVec* self);
  * Returns the TaskVec's length.
  * <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec whose length shall be returned.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @return the TaskVec's length.
  */
 size_t tvec_len(TaskVec const* self);
@@ -69,7 +69,7 @@ size_t tvec_len(TaskVec const* self);
  * Returns the TaskVec's capacity.
  * <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec whose capacity shall be returned.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @return the TaskVec's capacity.
  */
 size_t tvec_cap(TaskVec const* self);
@@ -78,7 +78,7 @@ size_t tvec_cap(TaskVec const* self);
  * Checks if the TaskVec is empty, i.e. it contains no Tasks.
  * <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec to check whether it's empty.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @return @p true if it's empty, @p false otherwise.
  */
 bool tvec_is_empty(TaskVec const* self);
@@ -88,7 +88,7 @@ bool tvec_is_empty(TaskVec const* self);
  * its capacity.
  * <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec to check whether it's at maximum
- * capacity. <b>Must not be @p NULL</b>.
+ * capacity. <b>Must not be @p NULL.</b>
  * @return @p true if it's at maximum capacity, @p false otherwise.
  */
 bool tvec_is_at_max_cap(TaskVec const* self);
@@ -101,7 +101,7 @@ bool tvec_is_at_max_cap(TaskVec const* self);
  * If this reallocation succeeds, @p true is returned, otherwise @p false is
  * returned and the TaskVec is left unchanged.
  * <tt>O(realloc(tvec_len(self) * sizeof(Task)))</tt> complexity.
- * @param self the address of the TaskVec to shrink. <b>Must not be @p NULL</b>.
+ * @param self the address of the TaskVec to shrink. <b>Must not be @p NULL.</b>
  * @return @p true if the TaskVec was shrunk successfully, @p false otherwise.
  */
 bool tvec_shrink_to_fit(TaskVec* self);
@@ -114,7 +114,7 @@ bool tvec_shrink_to_fit(TaskVec* self);
  * returned and the TaskVec is left unchanged.
  * <tt>O(realloc(min(tvec_len(self), min_capacity) * sizeof(Task)))</tt>
  * complexity.
- * @param self the address of the TaskVec to shrink. <b>Must not be @p NULL</b>.
+ * @param self the address of the TaskVec to shrink. <b>Must not be @p NULL.</b>
  * @return @p true if the TaskVec was shrunk successfully, @p false otherwise.
  */
 bool tvec_shrink_to(TaskVec* self, size_t min_capacity);
@@ -124,7 +124,7 @@ bool tvec_shrink_to(TaskVec* self, size_t min_capacity);
  * iterator is equal to tvec_end(self).
  * <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec whose beginning iterator shall be
- * returned. <b>Must not be @p NULL</b>.
+ * returned. <b>Must not be @p NULL.</b>
  * @return a readonly iterator to the first Task.
  */
 struct Task const* tvec_begin(TaskVec const* self);
@@ -134,7 +134,7 @@ struct Task const* tvec_begin(TaskVec const* self);
  * iterator is equal to tvec_end(self).
  * <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec whose beginning iterator shall be
- * returned. <b>Must not be @p NULL</b>.
+ * returned. <b>Must not be @p NULL.</b>
  * @return a mutable iterator to the first Task.
  */
 struct Task* tvec_begin_mut(TaskVec* self);
@@ -144,7 +144,7 @@ struct Task* tvec_begin_mut(TaskVec* self);
  * past-the-end Task.
  * <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec whose end iterator shall be returned.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @return an iterator to the end of the TaskVec.
  */
 struct Task const* tvec_end(TaskVec const* self);
@@ -154,7 +154,7 @@ struct Task const* tvec_end(TaskVec const* self);
  * If <tt>idx >= tvec_len(self)</tt>, @p NULL is returned.
  * <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec from which to return the iterator.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @param idx the index of the Task whose iterator is returned.
  * @return a readonly iterator to the Task at index @p idx, or @p NULL if
  * <tt>idx >= tvec_len(self)</tt>.
@@ -166,7 +166,7 @@ struct Task const* tvec_at(TaskVec const* self, size_t idx);
  * If <tt>idx >= tvec_len(self)</tt>, @p NULL is returned.
  * <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec from which to return the iterator.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @param idx the index of the Task whose iterator is returned.
  * @return a mutable iterator to the Task at index @p idx, or @p NULL if
  * <tt>idx >= tvec_len(self)</tt>.
@@ -182,9 +182,9 @@ struct Task* tvec_at_mut(TaskVec* self, size_t idx);
  * sizes are attempted. If even then reallocation fails, @p false is returned.
  * Amortized <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec to which the Task is pushed.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @param task the address of the Task to push to the TaskVec.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @return @p true if the Task was successfully pushed, @p false otherwise.
  */
 bool tvec_push(TaskVec* restrict self, struct Task* restrict task);
@@ -192,7 +192,7 @@ bool tvec_push(TaskVec* restrict self, struct Task* restrict task);
 /**
  * Inserts a Task at index @p idx in the TaskVec. The Task is shallow copied to
  * the TaskVec by means of the assignment operator @p =.
- * If <tt>idx >= tvec_len(self)</tt>, no Task is inserted, and @p false is
+ * If <tt>idx > tvec_len(self)</tt>, no Task is inserted, and @p false is
  * returned.
  * If a reallocation occurs, reading from pointers to Tasks previously owned by
  * the TaskVec is undefined.
@@ -200,10 +200,11 @@ bool tvec_push(TaskVec* restrict self, struct Task* restrict task);
  * sizes are attempted. If even then reallocation fails, @p false is returned.
  * Amortized <tt>O(tvec_len(self) - idx)</tt> complexity.
  * @param self the address of the TaskVec to which the Task is inserted.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @param task the address of the Task to insert in the TaskVec.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @param idx the index in the TaskVec at which to insert the Task.
+ * <b>Must be <= <tt>tvec_len(self)</tt>.</b>
  * @return @p true if the Task was successfully inserted, @p false otherwise.
  */
 bool tvec_insert_at(
@@ -218,7 +219,7 @@ bool tvec_insert_at(
  * means of the assignment operator @p =.
  * <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec from which to pop a Task.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @param opt_task (output parameter) optional address of a Task to which the
  * popped Task may be shallow copied to. If @p NULL, it is unused.
  * @return @p NULL if the TaskVec is empty. If it isn't, and @p opt_task is not
@@ -235,8 +236,9 @@ struct Task* tvec_pop(TaskVec* restrict self, struct Task* restrict opt_task);
  * returned.
  * <tt>O(1)</tt> complexity.
  * @param self the address of the TaskVec from which the Task is removed.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @param idx the index in the TaskVec from which to remove the Task.
+ * <b>Must be < <tt>tvec_len(self)</tt>.</b>
  * @return @p true if the Task was successfully removed, @p false otherwise.
  */
 bool tvec_rm_at(TaskVec* self, size_t idx);
@@ -247,7 +249,7 @@ bool tvec_rm_at(TaskVec* self, size_t idx);
  * returned.
  * <tt>O(tvec_len(self) - idx)</tt> complexity.
  * @param self the address of the TaskVec from which the Task is removed.
- * <b>Must not be @p NULL</b>.
+ * <b>Must not be @p NULL.</b>
  * @param idx the index in the TaskVec from which to remove the Task.
  * @return @p true if the Task was successfully removed, @p false otherwise.
  */

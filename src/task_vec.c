@@ -174,7 +174,6 @@ bool tvec_push(TaskVec* const restrict self, Task* const restrict task) {
         size_t new_cap;
         size_t additional_cap =
             self->cap != 0 ? (self->cap >> 1u) : FIRST_ALLOC_CAP;
-
         for (size_t i = 0; i < ALLOC_ATTEMPT_COUNT; ++i) {
             size_t new_size;
             if (__builtin_add_overflow(self->cap, additional_cap, &new_cap) ||
@@ -193,7 +192,6 @@ bool tvec_push(TaskVec* const restrict self, Task* const restrict task) {
                 break;
             }
         }
-
         self->buf = new_buf;
         self->cap = new_cap;
     }
@@ -201,7 +199,6 @@ bool tvec_push(TaskVec* const restrict self, Task* const restrict task) {
     return true;
 }
 
-// TODO: implement.
 bool tvec_insert_at(
     TaskVec* const restrict self,
     struct Task* const restrict task,
@@ -213,25 +210,47 @@ bool tvec_insert_at(
     assert(idx < self->len);
 #   endif  // TASK_VEC_RUNTIME_ASSERTS
 
-//     if (m_is_at_max_cap(self)) {
-//         size_t new_cap;
-//         if (__builtin_add_overflow(self->cap, self->cap >> 1, &new_cap)) {
-//             return false;
-//         }
-
-//         size_t new_size;
-//         if (__builtin_mul_overflow(new_cap, sizeof *self->buf, &new_size)) {
-//             return false;
-//         }
-
-//         Task* const new_buf = realloc(self->buf, new_size);
-//         if (!new_buf) {
-//             return false;
-//         }
-//         self->buf = new_buf;
-//         self->cap = new_cap;
-//     }
-    return false;
+    if (idx > self->len) {
+        return false;
+    }
+    if (is_at_max_cap_(self)) {
+        Task* new_buf;
+        size_t new_cap;
+        size_t additional_cap =
+            self->cap != 0 ? (self->cap >> 1u) : FIRST_ALLOC_CAP;
+        for (size_t i = 0; i < ALLOC_ATTEMPT_COUNT; ++i) {
+            size_t new_size;
+            if (__builtin_add_overflow(self->cap, additional_cap, &new_cap) ||
+                __builtin_mul_overflow(new_cap, sizeof *self->buf, &new_size)
+            ) {
+                additional_cap = self->cap >> (i + 1);
+                if (additional_cap <= self->cap ||
+                    i == ALLOC_ATTEMPT_COUNT - 1
+                ) {
+                    return false;
+                }
+                continue;
+            }
+            new_buf = realloc(self->buf, new_size);
+            if (new_buf) {
+                break;
+            }
+        }
+        self->buf = new_buf;
+        self->cap = new_cap;
+    }
+    if (self->len > 0) {
+        memmove(
+            self->buf + idx + 1,
+            self->buf + idx,
+            (self->len - idx) * sizeof *self->buf
+        );
+        self->buf[idx] = *task;
+    } else {
+        self->buf[0] = *task;
+    }
+    ++self->len;
+    return true;
 }
 
 Task* tvec_pop(TaskVec* const restrict self, Task* const restrict opt_task) {

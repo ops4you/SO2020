@@ -42,7 +42,7 @@ BwOutcome bw_with_default_cap(BufWriter* const init, int const file_des) {
     }
     init->file_des = file_des;
     init->pos = 0ul;
-    init->cap = 0ul;
+    init->cap = DEFAULT_CAP;
     return BW_OK;
 }
 
@@ -119,15 +119,18 @@ BwOutcome bw_drop_and_close(BufWriter* const self) {
 
 char* bw_replace_buf(
     BufWriter* const restrict self,
-    char* const restrict new_buf
+    char* const restrict new_buf,
+    size_t const new_buf_size
 ) {
 #   if BUF_WRITER_RUNTIME_ASSERTS
     assert(self != NULL);
     assert(new_buf != NULL);
+    assert(new_buf_size > 0ul);
 #   endif  // BUF_WRITER_RUNTIME_ASSERTS
 
     char* const old_buf = self->buf;
     self->buf = new_buf;
+    self->cap = new_buf_size;
     self->pos = 0ul;
     return old_buf;
 }
@@ -160,7 +163,7 @@ int bw_descriptor_mut(BufWriter* const self) {
     return self->file_des;
 }
 
-size_t bw_pos(BufWriter const* const self) {
+size_t bw_used_bytes(BufWriter const* const self) {
 #   if BUF_WRITER_RUNTIME_ASSERTS
     assert(self != NULL);
 #   endif  // BUF_WRITER_RUNTIME_ASSERTS

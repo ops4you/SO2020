@@ -36,8 +36,9 @@ BrOutcome br_with_deafault_cap(BufReader* const init, int const file_des) {
         return BR_ERR_ALLOC_FAIL;
     }
     init->file_des = file_des;
-    init->pos = 0ul;
-    init->cap = 0ul;
+    init->begin = 0ul;
+    init->end = 0ul;
+    init->cap = DEFAULT_CAP;
     return BR_OK;
 }
 
@@ -57,7 +58,8 @@ BrOutcome br_with_cap(
         return BR_ERR_ALLOC_FAIL;
     }
     init->file_des = file_des;
-    init->pos = 0ul;
+    init->begin = 0ul;
+    init->end = 0ul;
     init->cap = capacity;
     return BR_OK;
 }
@@ -77,7 +79,8 @@ void br_with_buf(
 
     init->file_des = file_des;
     init->buf = buf;
-    init->pos = 0ul;
+    init->begin = 0ul;
+    init->end = 0ul;
     init->cap = buf_size;
 }
 
@@ -87,7 +90,6 @@ void br_drop(BufReader* const self) {
 #   endif  // BUF_READER_RUNTIME_ASSERTS
 
     free(self->buf);
-    self->pos = 0ul;
 }
 
 BrOutcome br_close(BufReader* const self) {
@@ -100,22 +102,25 @@ BrOutcome br_drop_and_close(BufReader* const self) {
 #   endif  // BUF_READER_RUNTIME_ASSERTS
 
     free(self->buf);
-    self->pos = 0ul;
     return close(self->file_des) == -1l ? BR_ERR_CLOSE_FAIL : BR_OK;
 }
 
 char* br_replace_buf(
     BufReader* const restrict self,
-    char* const restrict new_buf
+    char* const restrict new_buf,
+    size_t const new_buf_size
 ) {
 #   if BUF_READER_RUNTIME_ASSERTS
     assert(self != NULL);
     assert(new_buf != NULL);
+    assert(new_buf_size > 0ul);
 #   endif  // BUF_READER_RUNTIME_ASSERTS
 
     char* const old_buf = self->buf;
     self->buf = new_buf;
-    self->pos = 0ul;
+    self->cap = new_buf_size;
+    self->begin = 0ul;
+    self->end = 0ul;
     return old_buf;
 }
 
@@ -127,7 +132,8 @@ int br_replace_file(BufReader* const self, int const new_file_des) {
 
     int const old_descriptor = self->file_des;
     self->file_des = new_file_des;
-    self->pos = 0ul;
+    self->begin = 0ul;
+    self->end = 0ul;
     return old_descriptor;
 }
 
@@ -147,12 +153,13 @@ int br_descriptor_mut(BufReader* const self) {
     return self->file_des;
 }
 
-size_t br_pos(BufReader const* const self) {
+// TODO: implement.
+size_t br_available_bytes(BufReader const* const self) {
 #   if BUF_READER_RUNTIME_ASSERTS
     assert(self != NULL);
 #   endif  // BUF_READER_RUNTIME_ASSERTS
 
-    return self->pos;
+    return 0ul;
 }
 
 size_t br_cap(BufReader const* const self) {
@@ -167,30 +174,15 @@ size_t br_cap(BufReader const* const self) {
 BrOutcome br_read(
     BufReader* const restrict self,
     char* const restrict buf,
-    size_t const n
+    size_t n,
+    size_t* const restrict read_bytes
 ) {
 #   if BUF_READER_RUNTIME_ASSERTS
     assert(self != NULL);
     assert(buf != NULL);
+    assert(read_bytes != NULL);
 #   endif  // BUF_READER_RUNTIME_ASSERTS
 
-    // if (n < self->pos) {
-    //     memcpy(buf, self->buf, n);
-    //     self->pos -= self->pos;
-    // } else {
-    //     memcpy(buf, self->buf, self->pos);
-    //     if (n > self->cap) {
-    //         try_read_(self->file_des, buf, n - self->pos);
-    //         self->pos = 0u;
-    //     } else {
-    //         struct iovec iov[2];
-    //         iov[0].iov_base = buf;
-    //         iov[0].iov_len = n - self->pos;
-    //         iov[1].iov_base = self->buf;
-    //         iov[1].iov_len = self->cap;
-    //         try_readv_(self->file_des, iov, 2);
-    //     }
-    // }
     return BR_OK;
 }
 
@@ -199,12 +191,12 @@ BrOutcome br_read_line(
     BufReader* const restrict self,
     char* const restrict buf,
     size_t const n,
-    size_t* const restrict line_len
+    size_t* const restrict read_bytes
 ) {
 #   if BUF_READER_RUNTIME_ASSERTS
     assert(self != NULL);
     assert(buf != NULL);
-    assert(line_len != NULL);
+    assert(read_bytes != NULL);
 #   endif  // BUF_READER_RUNTIME_ASSERTS
 
     return BR_OK;

@@ -38,6 +38,7 @@ typedef enum BwOutcome {
  * made:
  * 1. <tt>assert(init != NULL)</tt>;
  * 2. <tt>assert(file_des > 0)</tt>.
+ * <tt>O(malloc(default capacity))</tt> complexity.
  * @param init (output parameter) address of the BufWriter to initialize.
  * <b>Must not be @p NULL.</b>
  * @param file_des the file descriptor to be associated with the BufWriter.
@@ -54,6 +55,7 @@ BwOutcome bw_with_default_cap(BufWriter* init, int file_des);
  * 1. <tt>assert(init != NULL)</tt>;
  * 2. <tt>assert(file_des > 0)</tt>;
  * 3. <tt>assert(capacity > 0ul)</tt>.
+ * <tt>O(malloc(capacity))</tt> complexity.
  * @param init (output parameter) address of the BufWriter to initialize.
  * <b>Must not be @p NULL.</b>
  * @param file_des the file descriptor to be associated with the BufWriter.
@@ -73,6 +75,7 @@ BwOutcome bw_with_cap(BufWriter* init, int file_des, size_t capacity);
  * 2. <tt>assert(file_des > 0)</tt>;
  * 3. <tt>assert(buf != NULL)</tt>;
  * 4. <tt>assert(buf_size > 0ul).
+ * <tt>O(1)</tt> complexity.
  * @param init (output parameter) address of the BufWriter to initialize.
  * <b>Must not be @p NULL.</b>
  * @param file_des the file descriptor to be associated with the BufWriter.
@@ -99,6 +102,7 @@ void bw_with_buf(
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * made:
  * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(free(self->buf))</tt> complexity.
  * @param self address of the BufWriter whose buffer shall be deallocated.
  * <b>Must not be @p NULL.</b>
  * @return @p BW_ERR_WRITE_FAIL if flushing fails, otherwise @p BW_OK.
@@ -114,6 +118,7 @@ BwOutcome bw_drop(BufWriter* self);
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * made:
  * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(close(self->file_des))</tt> complexity.
  * @param self address of the BufWriter whose file shall be closed.
  * <b>Must not be @p NULL.</b>
  * @return @p BW_ERR_WRITE_FAIL if flushing fails, otherwise
@@ -131,6 +136,7 @@ BwOutcome bw_close(BufWriter* self);
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * made:
  * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(free(self->buf) + close(self->file_des))</tt> complexity.
  * @param self address of the BufWriter whose buffer shall be deallocated and
  * file shall be closed.
  * <b>Must not be @p NULL.</b>
@@ -140,21 +146,28 @@ BwOutcome bw_close(BufWriter* self);
 BwOutcome bw_drop_and_close(BufWriter* self);
 
 /**
- * Replaces the BufWriter's underlying buffer with the provided one, and returns
- * the old buffer.
+ * Replaces the BufWriter's underlying buffer with the provided buffer, and its
+ * capacity with the new buffer's size, and returns the old buffer.
  * <b>Doesn't flush the BufWriter.</b>
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * are made:
  * 1. <tt>assert(self != NULL)</tt>;
  * 2. <tt>assert(new_buf != NULL)</tt>.
+ * 3. <tt>assert(new_buf_size > 0ul)</tt>.
+ * <tt>O(1)</tt> complexity.
  * @param self address of the BufWriter whose underlying buffer shall be
  * replaced.
  * <b>Must not be @p NULL.</b>
  * @param new_buf the buffer to replace the BufWriter's buffer.
  * <b>Must not be @p NULL.</b>
+ * @param new_buf_size the size of the new buffer. <b>Must be positive.</b>
  * @return the BufWriter's old buffer.
  */
-char* bw_replace_buf(BufWriter* restrict self, char* restrict new_buf);
+char* bw_replace_buf(
+    BufWriter* restrict self,
+    char* restrict new_buf,
+    size_t new_buf_size
+);
 
 /**
  * Replaces the BufWriter's underlying file descriptor with the provided one,
@@ -164,6 +177,7 @@ char* bw_replace_buf(BufWriter* restrict self, char* restrict new_buf);
  * are made:
  * 1. <tt>assert(self != NULL)</tt>;
  * 2. <tt>assert(new_file_des > 0)</tt>.
+ * <tt>O(1)</tt> complexity.
  * @param self address of the BufWriter whose underlying file descriptor shall
  * be replaced.
  * @param new_file_des the file descriptor to replace the BufWriter's file
@@ -179,6 +193,7 @@ int bw_replace_file(BufWriter* self, int new_file_des);
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * are made:
  * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(1)</tt> complexity.
  * @param self address of the BufWriter whose underlying file descriptor shall
  * be returned.
  * <b>Must not be @p NULL.</b>
@@ -191,6 +206,7 @@ int bw_descriptor(BufWriter const* self);
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * are made:
  * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(1)</tt> complexity.
  * @param self address of the BufWriter whose underlying file descriptor shall
  * be returned.
  * <b>Must not be @p NULL.</b>
@@ -199,16 +215,18 @@ int bw_descriptor(BufWriter const* self);
 int bw_descriptor_mut(BufWriter* self);
 
 /**
- * Returns the current position in the BufWriter's buffer.
+ * Returns the amount of used bytes in the BufWriter's buffer, i.e. the
+ * amount of bytes that haven't yet been flushed.
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * are made:
  * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(1)</tt> complexity.
  * @param self address of the BufWriter whose buffer's position shall be
  * returned.
  * <b>Must not be @p NULL.</b>
- * @return the current position in the BufWriter's buffer.
+ * @return the amount of used bytes in the BufWriter's buffer.
  */
-size_t bw_pos(BufWriter const* self);
+size_t bw_used_bytes(BufWriter const* self);
 
 /**
  * Returns the BufWriter's maximum capacity.
@@ -216,6 +234,7 @@ size_t bw_pos(BufWriter const* self);
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * are made:
  * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(1)</tt> complexity.
  * @param self address of the BufWriter whose capacity shall be returned.
  * <b>Must not be @p NULL.</b>
  * @return the BufWriter's maximum capacity.
@@ -228,6 +247,7 @@ size_t bw_cap(BufWriter const* self);
  * are made:
  * 1. <tt>assert(self != NULL)</tt>;
  * 2. <tt>assert(buf != NULL)</tt>.
+ * Amortized <tt>O(n)</tt> complexity.
  * @param self address of the BufWriter to which @p buf shall be written to.
  * <b>Must not be @p NULL.</b>
  * @param buf the buffer to be written to the BufWriter.
@@ -249,6 +269,7 @@ BwOutcome bw_write(
  * are made:
  * 1. <tt>assert(self != NULL)</tt>;
  * 2. <tt>assert(buf != NULL)</tt>.
+ * Amortized <tt>O(n)</tt> complexity.
  * @param self address of the BufWriter to which @p buf shall be written to.
  * <b>Must not be @p NULL.</b>
  * @param buf the buffer to be written to the BufWriter.
@@ -268,6 +289,7 @@ BwOutcome bw_write_line(
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * are made:
  * 1. <tt>assert(self != NULL)</tt>.
+ * Amortized <tt>O(1)</tt> complexity.
  * @param self address of the BufWriter to which @p str shall be written to.
  * <b>Must not be @p NULL.</b>
  * @param c the character to be written to the BufWriter.
@@ -281,6 +303,7 @@ BwOutcome bw_write_char(BufWriter* self, char c);
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * are made:
  * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(self->pos)</tt> complexity.
  * @param self address of the BufWriter to be flushed.
  * <b>Must not be @p NULL.</b>
  * @return @p BW_ERR_WRITE_FAIL if a file write occurs and fails, otherwise
