@@ -1,16 +1,22 @@
-#include "buf_writer.h"
+#include "buf_io/buf_writer.h"
 
 #include <unistd.h>
 
 #include <sys/uio.h>
 
 #include <assert.h>
+#include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #ifndef static_assert
 #define static_assert _Static_assert
 #endif  // static_assert
+
+#ifndef thread_local
+#define thread_local _Thread_local
+#endif  // thread_local
 
 #define try_write_(fd, buf, n) \
     if (write(fd, buf, n) == -1l) return BW_ERR_WRITE_FAIL
@@ -24,6 +30,7 @@
     if (self->pos > 0ul) try_write_(self->file_des, self->buf, self->pos)
 
 #define DEFAULT_CAP 8192ul
+#define OUTCOME_MSG_SIZE 1024ul
 
 BwOutcome bw_with_default_cap(BufWriter* const init, int const file_des) {
     static_assert(
@@ -163,6 +170,22 @@ int bw_descriptor_mut(BufWriter* const self) {
     return self->file_des;
 }
 
+char const* bw_internal_buf(BufWriter const* const self) {
+#   if BUF_WRITER_RUNTIME_ASSERTS
+    assert(self != NULL);
+#   endif  // BUF_WRITER_RUNTIME_ASSERTS
+
+    return self->buf;
+}
+
+char* bw_internal_buf_mut(BufWriter* const self) {
+#   if BUF_WRITER_RUNTIME_ASSERTS
+    assert(self != NULL);
+#   endif  // BUF_WRITER_RUNTIME_ASSERTS
+
+    return self->buf;
+}
+
 size_t bw_used_bytes(BufWriter const* const self) {
 #   if BUF_WRITER_RUNTIME_ASSERTS
     assert(self != NULL);
@@ -284,4 +307,49 @@ BwOutcome bw_flush(BufWriter* self) {
 
     try_flush_(self);
     return BW_OK;
+}
+
+char const* bw_outcome_msg(
+    BwOutcome const outcome,
+    int const* const opt_errno
+) {
+    static_assert(
+        BW_OK == 0 &&
+            BW_ERR_ALLOC_FAIL == 1 &&
+            BW_ERR_WRITE_FAIL == 2 &&
+            BW_ERR_CLOSE_FAIL == 3,
+        "Unexpected BwOutcome enumerate values"
+    );
+
+#   if BUF_WRITER_RUNTIME_ASSERTS
+    assert(outcome >= BW_OK && outcome <= BW_ERR_CLOSE_FAIL);
+#   endif  // BUF_WRITER_RUNTIME_ASSERTS
+
+    static char const* const msgs[] = {
+        "success",
+        "failed allocating dynamic memory for the BufWriter",
+        "failed writing to the file descriptor",
+        "failed closing the file",
+        "unknown BufWriter error"
+    };
+    switch (outcome) {
+    case BW_ERR_ALLOC_FAIL:
+    case BW_ERR_WRITE_FAIL:
+    case BW_ERR_CLOSE_FAIL:
+        if (opt_errno) {
+            static thread_local char msg_with_err[OUTCOME_MSG_SIZE];
+            snprintf(
+                msg_with_err,
+                OUTCOME_MSG_SIZE,
+                "%s: %s",
+                msgs[outcome],
+                strerror(*opt_errno)
+            );
+            return msg_with_err;
+        }
+    case BW_OK:
+        return msgs[outcome];
+    default:
+        return msgs[sizeof msgs / sizeof *msgs - 1];
+    }
 }

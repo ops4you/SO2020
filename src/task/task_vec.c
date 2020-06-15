@@ -1,6 +1,6 @@
-#include "task_vec.h"
+#include "task/task_vec.h"
 
-#include "task.h"
+#include "task/task.h"
 
 #if TASK_VEC_RUNTIME_ASSERTS
 #include <assert.h>
@@ -163,6 +163,40 @@ Task* tvec_at_mut(TaskVec* const self, size_t const idx) {
     return at_(self, idx);
 }
 
+Task const* tvec_search_by_tid(
+    TaskVec const* const restrict self,
+    size_t const tid,
+    size_t* const restrict opt_idx
+) {
+    Task const* const end = end_(self);
+    for (Task const* i = self->buf; i != end; ++i) {
+        if (i->task_id == tid) {
+            if (opt_idx) {
+                *opt_idx = i - self->buf;
+            }
+            return i;
+        }
+    }
+    return NULL;
+}
+
+Task* tvec_search_by_tid_mut(
+    TaskVec* const restrict self,
+    size_t const tid,
+    size_t* const restrict opt_idx
+) {
+    Task const* const end = end_(self);
+    for (Task* i = self->buf; i != end; ++i) {
+        if (i->task_id == tid) {
+            if (opt_idx) {
+                *opt_idx = i - self->buf;
+            }
+            return i;
+        }
+    }
+    return NULL;
+}
+
 bool tvec_push(TaskVec* const restrict self, Task* const restrict task) {
 #   if TASK_VEC_RUNTIME_ASSERTS
     assert(self != NULL);
@@ -275,7 +309,7 @@ bool tvec_rm_at(TaskVec* const self, size_t const idx) {
 #   endif  // TASK_VEC_RUNTIME_ASSERTS
 
     if (idx >= self->len) {
-        return NULL;
+        return false;
     }
     if (self->len > 1) {
         self->buf[idx] = self->buf[self->len - 1];
@@ -291,7 +325,7 @@ bool tvec_rm_ord_at(TaskVec* const self, size_t const idx) {
 #   endif  // TASK_VEC_RUNTIME_ASSERTS
 
     if (idx >= self->len) {
-        return NULL;
+        return false;
     }
     if (self->len > 1) {
         memmove(
@@ -302,4 +336,25 @@ bool tvec_rm_ord_at(TaskVec* const self, size_t const idx) {
     }
     --self->len;
     return true;
+}
+
+bool tvec_rm_by_tid(TaskVec* const self, size_t const tid){
+#   if TASK_VEC_RUNTIME_ASSERTS
+    assert(self != NULL);
+#   endif  // TASK_VEC_RUNTIME_ASSERTS
+
+    Task const* const end = end_(self);
+    for (Task* i = self->buf; i != end; ++i) {
+        if (i->task_id == tid) {
+            if (self->len > 1) {
+                memmove(
+                    i,
+                    i + 1,
+                    (self->len - (i - self->buf) - 1) * sizeof *self->buf);
+            }
+            --self->len;
+            return true;
+        }
+    }
+    return false;
 }

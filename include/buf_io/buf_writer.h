@@ -102,7 +102,7 @@ void bw_with_buf(
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * made:
  * 1. <tt>assert(self != NULL)</tt>.
- * <tt>O(free(self->buf))</tt> complexity.
+ * <tt>O(bw_used_bytes(self) + free(bw_internal_buf_mut(self)))</tt> complexity.
  * @param self address of the BufWriter whose buffer shall be deallocated.
  * <b>Must not be @p NULL.</b>
  * @return @p BW_ERR_WRITE_FAIL if flushing fails, otherwise @p BW_OK.
@@ -118,7 +118,7 @@ BwOutcome bw_drop(BufWriter* self);
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * made:
  * 1. <tt>assert(self != NULL)</tt>.
- * <tt>O(close(self->file_des))</tt> complexity.
+ * <tt>O(bw_used_bytes(self) + close(bw_descriptor_mut(self)))</tt> complexity.
  * @param self address of the BufWriter whose file shall be closed.
  * <b>Must not be @p NULL.</b>
  * @return @p BW_ERR_WRITE_FAIL if flushing fails, otherwise
@@ -136,7 +136,8 @@ BwOutcome bw_close(BufWriter* self);
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * made:
  * 1. <tt>assert(self != NULL)</tt>.
- * <tt>O(free(self->buf) + close(self->file_des))</tt> complexity.
+ * <tt>O(bw_used_bytes(self) + free(bw_internal_buf_mut(self)) +
+ * close(bw_descriptor_mut(self)))</tt> complexity.
  * @param self address of the BufWriter whose buffer shall be deallocated and
  * file shall be closed.
  * <b>Must not be @p NULL.</b>
@@ -213,6 +214,32 @@ int bw_descriptor(BufWriter const* self);
  * @return the BufWriter's underlying file descriptor.
  */
 int bw_descriptor_mut(BufWriter* self);
+
+/**
+ * Returns a readonly pointer to the BufWriter's underlying buffer.
+ * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
+ * are made:
+ * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(1)</tt> complexity.
+ * @param self address of the BufWriter whose underlying buffer shall be
+ * returned.
+ * <b>Must not be @p NULL.</b>
+ * @return a readonly pointer to the BufWriter's underlying buffer.
+ */
+char const* bw_internal_buf(BufWriter const* self);
+
+/**
+ * Returns a mutable pointer to the BufWriter's underlying buffer.
+ * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
+ * are made:
+ * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(1)</tt> complexity.
+ * @param self address of the BufWriter whose underlying buffer shall be
+ * returned.
+ * <b>Must not be @p NULL.</b>
+ * @return a mutable pointer to the BufWriter's underlying buffer.
+ */
+char* bw_internal_buf_mut(BufWriter* self);
 
 /**
  * Returns the amount of used bytes in the BufWriter's buffer, i.e. the
@@ -303,12 +330,25 @@ BwOutcome bw_write_char(BufWriter* self, char c);
  * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * are made:
  * 1. <tt>assert(self != NULL)</tt>.
- * <tt>O(self->pos)</tt> complexity.
+ * <tt>O(bw_used_bytes(self))</tt> complexity.
  * @param self address of the BufWriter to be flushed.
  * <b>Must not be @p NULL.</b>
  * @return @p BW_ERR_WRITE_FAIL if a file write occurs and fails, otherwise
  * @p BW_OK.
  */
 BwOutcome bw_flush(BufWriter* self);
+
+/**
+ * Returns the message associated with the BwOutcome.
+ * If @p BUF_WRITER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
+ * are made:
+ * 1. <tt>assert(outcome >= BW_OK && outcome <= BW_ERR_CLOSE_FAIL)</tt>.
+ * <tt>O(1)</tt> complexity.
+ * @param outcome the BwOutcome whose associated message is returned. If not a
+ * valid BwOutcome, a message describing that the outcome is unknown is
+ * returned.
+ * @return the message associated with the BwOutcome.
+ */
+char const* bw_outcome_msg(BwOutcome outcome, int const* opt_errno);
 
 #endif  // BUF_IO_BUF_WRITER_H

@@ -47,7 +47,7 @@ typedef enum BrOutcome {
  * <b>Must be a valid file descriptor opened with read mode.</b>
  * @return @p BR_ERR_ALLOC_FAIL if memory allocation fails, otherwise @p BR_OK.
  */
-BrOutcome br_with_deafault_cap(BufReader* init, int file_des);
+BrOutcome br_with_default_cap(BufReader* init, int file_des);
 
 /**
  * Creates a BufReader with the provided capacity from a file descriptor.
@@ -103,7 +103,7 @@ void br_with_buf(
  * If @p BUF_READER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * made:
  * 1. <tt>assert(self != NULL)</tt>.
- * <tt>O(free(self->buf))</tt> complexity.
+ * <tt>O(free(br_internal_buf_mut(self)))</tt> complexity.
  * @param self address of the BufReader whose buffer shall be deallocated.
  * <b>Must not be @p NULL.</b>
  */
@@ -117,7 +117,7 @@ void br_drop(BufReader* self);
  * If @p BUF_READER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * made:
  * 1. <tt>assert(self != NULL)</tt>.
- * <tt>O(close(self->file_des))</tt> complexity.
+ * <tt>O(close(br_descriptor_mut(self)))</tt> complexity.
  * @param self address of the BufReader whose file shall be closed.
  * <b>Must not be @p NULL.</b>
  * @return @p BR_ERR_CLOSE_FAIL if closing fails, otherwise @p BR_OK.
@@ -132,7 +132,8 @@ BrOutcome br_close(BufReader* self);
  * If @p BUF_READER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
  * made:
  * 1. <tt>assert(self != NULL)</tt>.
- * <tt>O(free(self->buf) + close(self->file_des))</tt> complexity.
+ * <tt>O(free(br_internal_buf_mut(self)) + close(br_descriptor_mut(self)))</tt>
+ * complexity.
  * @param self address of the BufReader whose buffer shall be deallocated and
  * file shall be closed.
  * <b>Must not be @p NULL.</b>
@@ -204,6 +205,32 @@ int br_descriptor(BufReader const* self);
  * @return the BufReader's underlying file descriptor.
  */
 int br_descriptor_mut(BufReader* self);
+
+/**
+ * Returns a readonly pointer to the BufReader's underlying buffer.
+ * If @p BUF_READER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
+ * are made:
+ * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(1)</tt> complexity.
+ * @param self address of the BufReader whose underlying buffer shall be
+ * returned.
+ * <b>Must not be @p NULL.</b>
+ * @return a readonly pointer to the BufReader's underlying buffer.
+ */
+char const* br_internal_buf(BufReader const* self);
+
+/**
+ * Returns a mutable pointer to the BufReader's underlying buffer.
+ * If @p BUF_READER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
+ * are made:
+ * 1. <tt>assert(self != NULL)</tt>.
+ * <tt>O(1)</tt> complexity.
+ * @param self address of the BufReader whose underlying buffer shall be
+ * returned.
+ * <b>Must not be @p NULL.</b>
+ * @return a mutable pointer to the BufReader's underlying buffer.
+ */
+char* br_internal_buf_mut(BufReader* self);
 
 /**
  * Returns the amount of available bytes in the BufReader's buffer, i.e. the
@@ -301,5 +328,18 @@ BrOutcome br_read_line(
  * @p BW_OK.
  */
 BrOutcome br_read_char(BufReader* restrict self, char* restrict c);
+
+/**
+ * Returns the message associated with the BrOutcome.
+ * If @p BUF_READER_RUNTIME_ASSERTS is set to @p 1, the following assertions are
+ * are made:
+ * 1. <tt>assert(outcome >= BR_OK && outcome <= BR_ERR_CLOSE_FAIL)</tt>.
+ * <tt>O(1)</tt> complexity.
+ * @param outcome the BrOutcome whose associated message is returned. If not a
+ * valid BrOutcome, a message describing that the outcome is unknown is
+ * returned.
+ * @return the message associated with the BrOutcome.
+ */
+char const* br_outcome_msg(BrOutcome outcome, int const* opt_errno);
 
 #endif  // BUF_IO_BUF_READER_H

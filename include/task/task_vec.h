@@ -1,5 +1,5 @@
-#ifndef TASK_VEC_H
-#define TASK_VEC_H
+#ifndef TASK_TASK_VEC_H
+#define TASK_TASK_VEC_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -174,6 +174,48 @@ struct Task const* tvec_at(TaskVec const* self, size_t idx);
 struct Task* tvec_at_mut(TaskVec* self, size_t idx);
 
 /**
+ * Returns a readonly iterator to the Task with id @p tid in the TaskVec.
+ * If no Task with such id exists, @p NULL is returned.
+ * If @p opt_idx isn't @p NULL, the index of the Task in the TaskVec is stored
+ * to it, if a Task was found.
+ * <tt>O(tvec_len(self))</tt> complexity.
+ * @param self the address of the TaskVec from which to return the iterator.
+ * <b>Must not be @p NULL.</b>
+ * @param tid the Task id of the Task whose iterator is returned.
+ * @param opt_idx (output parameter) optional address of a size type to which is
+ * stored the Task index in the TaskVec, if a Task was found. If @p NULL, it is
+ * unused.
+ * @return a readonly iterator to the Task with id @p tid, or @p NULL if
+ * such Task doesn't exist.
+ */
+struct Task const* tvec_search_by_tid(
+    TaskVec const* restrict self,
+    size_t tid,
+    size_t* restrict opt_idx
+);
+
+/**
+ * Returns a mutable iterator to the Task with id @p tid in the TaskVec.
+ * If no Task with such id exists, @p NULL is returned.
+ * If @p opt_idx isn't @p NULL, the index of the Task in the TaskVec is stored
+ * to it, if a Task was found.
+ * <tt>O(tvec_len(self))</tt> complexity.
+ * @param self the address of the TaskVec from which to return the iterator.
+ * <b>Must not be @p NULL.</b>
+ * @param tid the Task id of the Task whose iterator is returned.
+ * @param opt_idx (output parameter) optional address of a size type to which is
+ * stored the Task index in the TaskVec, if a Task was found. If @p NULL, it is
+ * unused.
+ * @return a mutable iterator to the Task with id @p tid, or @p NULL if
+ * such Task doesn't exist.
+ */
+struct Task* tvec_search_by_tid_mut(
+    TaskVec* restrict self,
+    size_t tid,
+    size_t* restrict opt_idx
+);
+
+/**
  * Pushes a Task to the end of the TaskVec. The Task is shallow copied to the
  * end of the TaskVec by means of the assignment operator @p =.
  * If a reallocation occurs, reading from pointers to Tasks previously owned by
@@ -255,4 +297,16 @@ bool tvec_rm_at(TaskVec* self, size_t idx);
  */
 bool tvec_rm_ord_at(TaskVec* self, size_t idx);
 
-#endif  // TASK_VEC_H
+/**
+ * Removes a Task from the TaskVec by Task id.
+ * If no Task with such id exists, no Task is removed, and @p false is
+ * returned.
+ * <tt>O(tvec_len(self))</tt> complexity.
+ * @param self the address of the TaskVec from which the Task is removed.
+ * <b>Must not be @p NULL.</b>
+ * @param tid the task id of the Task to remove from the TaskVec.
+ * @return @p true if the Task was successfully removed, @p false otherwise.
+ */
+bool tvec_rm_by_tid(TaskVec* self, size_t tid);
+
+#endif  // TASK_TASK_VEC_H

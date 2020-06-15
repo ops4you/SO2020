@@ -48,7 +48,56 @@ ParseSizeOutcome parse_size(
     return PARSE_SIZE_OK;
 }
 
-char const* parse_size_outcome_to_msg(ParseSizeOutcome const err) {
+ParseSizeOutcome parse_size_slice(
+    char const* begin,
+    char const* const end,
+    size_t* const restrict size,
+    char* const restrict opt_inv_char
+) {
+    while (begin != end && isspace(*begin)) {
+        ++begin;
+    }
+    if (begin == end) {
+        return PARSE_SIZE_ERR_NO_DIGITS;
+    }
+    if (*begin == '-') {
+        return PARSE_SIZE_ERR_NEGATIVE;
+    }
+    bool digits_found = false;
+    if (isdigit(begin)) {
+        digits_found = true;
+        *size = *begin - '0';
+        ++begin;
+    } else {
+        if (opt_inv_char) {
+            *opt_inv_char = *begin;
+        }
+        return PARSE_SIZE_ERR_INV_CHAR;
+    }
+    while (begin != end && isdigit(*begin)) {
+        if (__builtin_mul_overflow(*size, 10, size) ||
+            __builtin_add_overflow(*size, *begin - '0', size)
+        ) {
+            return PARSE_SIZE_ERR_OUT_OF_RANGE;
+        }
+        ++begin;
+    }
+    while (begin != end && isspace(*begin)) {
+        ++begin;
+    }
+    if (begin != end) {
+        if (opt_inv_char) {
+            *opt_inv_char = *begin;
+        }
+        return PARSE_SIZE_ERR_INV_CHAR;
+    }
+    if (!digits_found) {
+        return PARSE_SIZE_ERR_NO_DIGITS;
+    }
+    return PARSE_SIZE_OK;
+}
+
+char const* parse_size_outcome_msg(ParseSizeOutcome const err) {
     switch (err) {
     case PARSE_SIZE_OK:
         return "success";
@@ -59,7 +108,7 @@ char const* parse_size_outcome_to_msg(ParseSizeOutcome const err) {
     case PARSE_SIZE_ERR_NO_DIGITS:
         return "no digits found";
     case PARSE_SIZE_ERR_OUT_OF_RANGE:
-        return "value could not be represented by an integral type";
+        return "value could not be represented by a size type";
     default:
         return "unknown parse error";
     }
